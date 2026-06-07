@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reality Check Console</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --bg-tertiary: #eeede9;
+    --text-primary: #1a1a18;
+    --text-secondary: #555551;
+    --text-tertiary: #99998f;
+    --border-tertiary: rgba(0,0,0,0.12);
+    --border-secondary: rgba(0,0,0,0.22);
+    --border-primary: rgba(0,0,0,0.35);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+ 
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #1e1e1c;
+      --bg-secondary: #272724;
+      --bg-tertiary: #313130;
+      --text-primary: #f0efeb;
+      --text-secondary: #a8a79f;
+      --text-tertiary: #6b6a63;
+      --border-tertiary: rgba(255,255,255,0.1);
+      --border-secondary: rgba(255,255,255,0.18);
+      --border-primary: rgba(255,255,255,0.28);
+    }
+  }
+ 
+  body {
+    font-family: var(--font);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+ 
+  header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+  }
+  header p {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+    font-style: italic;
+  }
+ 
+  .console {
+    width: 100%;
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+ 
+  @media (max-width: 540px) {
+    .console { grid-template-columns: 1fr; }
+  }
+ 
+  .panel {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+ 
+  .panel-label {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.07em;
+    text-transform: lowercase;
+    margin-bottom: 3px;
+  }
+ 
+  .panel-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+ 
+  /* ── iron triangle ── */
+  .tri-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+ 
+  .tri-btn {
+    flex: 1;
+    border: 0.5px solid var(--border-secondary);
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    padding: 18px 8px;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    line-height: 1;
+  }
+  .tri-btn:hover { background: var(--bg-secondary); }
+ 
+  .consequence-box {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    min-height: 72px;
+    transition: all 0.15s;
+  }
+  .consequence-box .cq-killed {
+    font-size: 12px;
+    font-weight: 500;
+    color: #A32D2D;
+    margin-bottom: 5px;
+  }
+  .consequence-box .cq-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .consequence-box .cq-empty {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+ 
+  /* ── attention budget ── */
+  .budget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+  }
+ 
+  #total-pct {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+ 
+  #stacked-bar {
+    height: 3px;
+    border-radius: 2px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 14px;
+    background: var(--bg-tertiary);
+  }
+ 
+  #projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+ 
+  .proj-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 0.5px solid var(--border-tertiary);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    outline: none;
+    width: 120px;
+    padding-bottom: 1px;
+    transition: border-color 0.1s;
+  }
+  .proj-name-input:focus { border-bottom-color: var(--border-primary); }
+ 
+  .rm-btn {
+    background: transparent;
+    border: 0.5px solid var(--border-secondary);
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: var(--font);
+    line-height: 1;
+    flex-shrink: 0;
+    transition: border-color 0.1s, color 0.1s;
+  }
+  .rm-btn:hover { border-color: #E24B4A; color: #E24B4A; }
+ 
+  #add-btn {
+    width: 100%;
+    border: 0.5px dashed var(--border-secondary);
+    border-radius: var(--radius-md);
+    background: transparent;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.1s;
+  }
+  #add-btn:hover:not(:disabled) { background: var(--bg-secondary); }
+  #add-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+ 
+  #commentary {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+    font-style: italic;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+ 
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 1.5px solid currentColor;
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 1.5px solid currentColor;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+ 
+<header>
+  <h1>reality check console</h1>
+  <p>two universal laws, one dashboard.</p>
+</header>
+ 
+<div class="console">
+ 
+  <!-- iron triangle -->
+  <div class="panel" id="panel-triangle">
+    <p class="panel-label">iron triangle</p>
+    <p class="panel-desc">pick any two. the third is a casualty of physics.</p>
+    <div class="tri-row">
+      <button class="tri-btn" id="btn-good"  onclick="toggleOpt('good')">Good</button>
+      <button class="tri-btn" id="btn-fast"  onclick="toggleOpt('fast')">Fast</button>
+      <button class="tri-btn" id="btn-cheap" onclick="toggleOpt('cheap')">Cheap</button>
+    </div>
+    <div class="consequence-box" id="consequence-box">
+      <p class="cq-empty">select two to reveal your fate.</p>
+    </div>
+  </div>
+ 
+  <!-- attention budget -->
+  <div class="panel">
+    <div class="budget-header">
+      <p class="panel-label">attention budget</p>
+      <span id="total-pct">100%</span>
+    </div>
+    <p class="panel-desc">100% of you, distributed across everything.<br><em>good luck.</em></p>
+    <div id="stacked-bar"></div>
+    <div id="projects-list"></div>
+    <button id="add-btn" onclick="addProject()">+ add project</button>
+    <p id="commentary"></p>
+  </div>
+ 
+</div>
+ 
+<script>
+const OPTS = {
+  good:  { bg:'#E1F5EE', border:'#0F6E56', text:'#085041' },
+  fast:  { bg:'#E6F1FB', border:'#185FA5', text:'#0C447C' },
+  cheap: { bg:'#FAEEDA', border:'#854F0B', text:'#633806' },
+};
+const DARK_OPTS = {
+  good:  { bg:'#085041', border:'#1D9E75', text:'#9FE1CB' },
+  fast:  { bg:'#0C447C', border:'#378ADD', text:'#B5D4F4' },
+  cheap: { bg:'#633806', border:'#BA7517', text:'#FAC775' },
+};
+const CONSEQ = {
+  good:  "fast and cheap — held together with tape and optimism.",
+  fast:  "good and cheap — arriving sometime next decade.",
+  cheap: "good and fast — please consult your finance department.",
+};
+const PFILL = ['#1D9E75','#378ADD','#D85A30','#7F77DD','#BA7517','#639922','#D4537E','#E24B4A'];
+const NAMES = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta'];
+const QUIPS = [
+  "100% focus. this will not last.",
+  "the illusion of balance.",
+  "multitasking: failing at three things simultaneously.",
+  "distributed like a cold buffet.",
+  "five projects. have you considered therapy?",
+  "you are a project manager now. condolences.",
+  "seven. the number of wonders and your regrets.",
+  "eight projects. you are no longer a person.",
+];
+ 
+const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+ 
+let selected = ['good','fast'], selOrder = ['good','fast'];
+let projects = [{id:1, name:'Project Alpha', value:100}], nextId = 2;
+ 
+function toggleOpt(id) {
+  if (selected.includes(id)) {
+    selected = selected.filter(s => s !== id);
+    selOrder = selOrder.filter(s => s !== id);
+  } else {
+    if (selected.length < 2) {
+      selected.push(id); selOrder.push(id);
+    } else {
+      const drop = selOrder[0];
+      selected = selected.filter(s => s !== drop);
+      selOrder = selOrder.filter(s => s !== drop);
+      selected.push(id); selOrder.push(id);
+    }
+  }
+  renderTri();
+}
+ 
+function renderTri() {
+  const notSel = ['good','fast','cheap'].find(k => !selected.includes(k));
+  const theme = isDark ? DARK_OPTS : OPTS;
+  ['good','fast','cheap'].forEach(key => {
+    const btn = document.getElementById('btn-' + key);
+    if (selected.includes(key)) {
+      const o = theme[key];
+      btn.style.background    = o.bg;
+      btn.style.borderColor   = o.border;
+      btn.style.color         = o.text;
+      btn.style.fontWeight    = '500';
+    } else {
+      btn.style.background  = '';
+      btn.style.borderColor = '';
+      btn.style.color       = '';
+      btn.style.fontWeight  = '400';
+    }
+  });
+  const box = document.getElementById('consequence-box');
+  if (selected.length === 2 && notSel) {
+    box.innerHTML = `<p class="cq-killed">× not ${notSel}</p><p class="cq-text">${CONSEQ[notSel]}</p>`;
+  } else {
+    box.innerHTML = `<p class="cq-empty">select two to reveal your fate.</p>`;
+  }
+}
+ 
+function addProject() {
+  if (projects.length >= 8) return;
+  const n = projects.length + 1;
+  const ev = Math.floor(100 / n), rem = 100 - ev * n;
+  projects = projects.map((p, i) => ({...p, value: ev + (i === 0 ? rem : 0)}));
+  projects.push({id: nextId++, name: 'Project ' + (NAMES[n - 1] || '#' + n), value: ev});
+  renderList();
+}
+ 
+function removeProject(id) {
+  if (projects.length <= 1) return;
+  const gone = projects.find(p => p.id === id);
+  projects = projects.filter(p => p.id !== id);
+  projects[0] = {...projects[0], value: projects[0].value + gone.value};
+  renderList();
+}
+ 
+function onSlide(id, raw) {
+  const val = parseInt(raw);
+  const othTotal = projects.filter(p => p.id !== id).reduce((s, p) => s + p.value, 0);
+  const clamped  = Math.min(Math.max(0, val), 100 - othTotal);
+  const idx      = projects.findIndex(p => p.id === id);
+  projects[idx]  = {...projects[idx], value: clamped};
+  const fill = PFILL[idx % PFILL.length];
+  const pEl  = document.getElementById('pct-' + id);
+  const sEl  = document.getElementById('sl-'  + id);
+  if (pEl) pEl.textContent = clamped + '%';
+  if (sEl) {
+    sEl.value = clamped;
+    sEl.style.background = sliderGrad(fill, clamped);
+    sEl.style.color = fill;
+  }
+  updateBar();
+}
+ 
+function updateName(id, val) {
+  const idx = projects.findIndex(p => p.id === id);
+  if (idx !== -1) projects[idx] = {...projects[idx], name: val};
+}
+ 
+function sliderGrad(fill, pct) {
+  return `linear-gradient(to right, ${fill} 0%, ${fill} ${pct}%, var(--bg-tertiary) ${pct}%, var(--bg-tertiary) 100%)`;
+}
+ 
+function updateBar() {
+  const total = projects.reduce((s, p) => s + p.value, 0);
+  const tEl   = document.getElementById('total-pct');
+  tEl.textContent = total + '%';
+  tEl.style.color = total >= 100 ? '#0F6E56' : '';
+  document.getElementById('stacked-bar').innerHTML =
+    projects.map((p, i) =>
+      `<div style="width:${p.value}%;background:${PFILL[i%PFILL.length]};height:100%;transition:width 0.08s;flex-shrink:0;"></div>`
+    ).join('') +
+    `<div style="flex:1;background:var(--bg-tertiary);"></div>`;
+}
+ 
+function renderList() {
+  const list = document.getElementById('projects-list');
+  list.innerHTML = projects.map((p, i) => {
+    const fill = PFILL[i % PFILL.length];
+    return `<div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <input class="proj-name-input" value="${p.name.replace(/"/g,'&quot;')}"
+          onchange="updateName(${p.id}, this.value)"
+          style="color:${fill};" />
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="pct-${p.id}" style="font-size:13px;font-weight:500;color:${fill};min-width:32px;text-align:right;">${p.value}%</span>
+          ${projects.length > 1 ? `<button class="rm-btn" onclick="removeProject(${p.id})">×</button>` : ''}
+        </div>
+      </div>
+      <input id="sl-${p.id}" type="range" min="0" max="100" step="1" value="${p.value}"
+        oninput="onSlide(${p.id}, this.value)"
+        style="background:${sliderGrad(fill, p.value)};color:${fill};" />
+    </div>`;
+  }).join('');
+ 
+  document.getElementById('commentary').textContent =
+    QUIPS[Math.min(projects.length - 1, QUIPS.length - 1)];
+ 
+  const ab = document.getElementById('add-btn');
+  ab.disabled = projects.length >= 8;
+ 
+  updateBar();
+}
+ 
+renderTri();
+renderList();
+</script>
+</body>
+</html>
